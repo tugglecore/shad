@@ -1,0 +1,17 @@
+[package]
+name = "flipr"
+version = "0.1.0"
+authors = ["tuggle <tuggledemetrius@gmail.com>"]
+license = "MIT"
+edition = "2021"
+
+[dependencies]
+crossterm = "0.28.1"
+ratatui = "0.29.0"
+color-eyre = "0.6.3"
+
+[dependencies.windows]
+version = "0.60.0"
+features = [
+    "Win32_NetworkManagement_IpHelper"
+]
