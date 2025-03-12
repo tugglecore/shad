@@ -1,8 +1,9 @@
+use crate::filter::FilterBox;
 use crate::sockets::SocketGrid;
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::{
-    layout::Constraint,
+    layout::{Constraint, Layout, Rect},
     style::{Style, Stylize},
     text::{Line, Text},
     widgets::{Block, Paragraph, Row, Table, TableState},
@@ -14,7 +15,17 @@ pub struct App {
     /// Is the application running?
     running: bool,
     table_state: TableState,
+    current_mode: Mode,
     current_screen: SocketGrid,
+    filter: FilterBox,
+}
+
+#[derive(Debug, Default)]
+enum Mode {
+    #[default]
+    Browse,
+    Filter,
+    Sort,
 }
 
 impl App {
@@ -42,7 +53,64 @@ impl App {
     /// - <https://docs.rs/ratatui/latest/ratatui/widgets/index.html>
     /// - <https://github.com/ratatui/ratatui/tree/master/examples>
     fn draw(&mut self, frame: &mut Frame) {
-        self.current_screen.draw(frame)
+        let vertical = Layout::vertical([
+            Constraint::Length(3),
+            Constraint::Min(3),
+            Constraint::Length(3),
+        ]);
+
+        let rects = vertical.split(frame.area());
+
+        self.render_header(frame, rects[0]);
+        self.current_screen.draw(frame, rects[1]);
+        self.render_footer(frame, rects[2]);
+    }
+
+    fn render_header(&mut self, frame: &mut Frame, area: Rect) {
+        use Constraint::Ratio;
+
+        let block = Block::bordered();
+        let horizontal = Layout::horizontal([Ratio(1, 3); 3]);
+
+        let rects = horizontal.split(block.inner(area));
+
+        frame.render_widget(block, area);
+
+        self.filter
+            .draw(frame, rects[0], matches!(self.current_mode, Mode::Filter));
+
+        let total_sockets = self.current_screen.sockets.len();
+        let count = Paragraph::new(format!("Total: {}", total_sockets));
+
+        frame.render_widget(count, rects[1]);
+
+        let sort = Paragraph::new("Sort: Press s to sort");
+
+        frame.render_widget(sort, rects[2]);
+    }
+
+    fn render_footer(&self, frame: &mut Frame, area: Rect) {
+        let (mode, controls) = match self.current_mode {
+            Mode::Browse => ("BROWSING", "q quit | ↑ or k move up | ↓ or j move down"),
+            Mode::Filter => (
+                "FILTERING",
+                "q quit filtering | type any text then press Enter to add filter",
+            ),
+            Mode::Sort => (
+                "SORTING",
+                "q quit sorting | → move right | ← move left | Enter toggle order",
+            ),
+        };
+
+        let block = Block::bordered()
+            .title(mode)
+            .padding(ratatui::widgets::Padding::horizontal(10));
+
+        let controls = Paragraph::new(controls).centered();
+
+        let inner_area = block.inner(area);
+        frame.render_widget(block, area);
+        frame.render_widget(controls, inner_area);
     }
 
     /// Reads the crossterm events and updates the state of [`App`].
@@ -62,12 +130,39 @@ impl App {
 
     /// Handles the key events and updates the state of [`App`].
     fn on_key_event(&mut self, key: KeyEvent) {
-        match (key.modifiers, key.code) {
-            // (_, KeyCode::Esc | KeyCode::Char('p')) =>
-            //     self.current_screen = ProcessTable
-            (_, KeyCode::Esc | KeyCode::Char('q'))
-            | (KeyModifiers::CONTROL, KeyCode::Char('c') | KeyCode::Char('C')) => self.quit(),
-            _ => {}
+        let key_combo = (key.modifiers, key.code);
+
+        let user_want_to_quit = matches!(
+            key_combo,
+            (_, KeyCode::Esc)
+                | (
+                    KeyModifiers::CONTROL,
+                    KeyCode::Char('c') | KeyCode::Char('C')
+                )
+        );
+
+        if user_want_to_quit {
+            self.quit()
+        }
+
+        if matches!(key_combo, (_, KeyCode::Char('q'))) {
+            if matches!(self.current_mode, Mode::Browse) {
+                self.quit()
+            } else {
+                self.current_mode = Mode::Browse
+            }
+        }
+
+        match self.current_mode {
+            Mode::Browse => match key_combo {
+                (_, KeyCode::Char('f')) => self.current_mode = Mode::Filter,
+                (_, KeyCode::Char('s')) => self.current_mode = Mode::Sort,
+                _ => {}
+            },
+            Mode::Filter => self.filter.on_key_event(key),
+            Mode::Sort => match key_combo {
+                _ => {}
+            },
         }
 
         self.current_screen.on_key_event(key);

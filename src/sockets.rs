@@ -12,7 +12,10 @@ use ratatui::{
 
 #[derive(Debug, Default)]
 pub struct SocketGrid {
-    sockets: Vec<Socket>,
+    // TODO: Refactor the visibility of this attribute.
+    // We only need it public to allow the renderer to
+    // get the count of sockets.
+    pub sockets: Vec<Socket>,
     table_state: TableState,
 }
 
@@ -26,13 +29,12 @@ impl SocketGrid {
 }
 
 impl SocketGrid {
-    pub fn draw(&mut self, frame: &mut Frame) {
+    pub fn draw(&mut self, frame: &mut Frame, area: Rect) {
         use Constraint::Ratio;
 
         let amount_of_columns = 5;
 
-        let frame_width =
-            (((1f64 / amount_of_columns as f64) * frame.area().width as f64).floor()) as u64;
+        let frame_width = (((1f64 / amount_of_columns as f64) * area.width as f64).floor()) as u64;
 
         let rows = self.sockets.iter().map(|socket| {
             // Here, we are working with Rows
@@ -53,7 +55,11 @@ impl SocketGrid {
                     .map(String::from_iter)
                     .collect::<Vec<_>>();
                 height = attribute.len();
-                attribute.join("\n")
+                let mut attribute = attribute.join("\n");
+
+                attribute.insert(0, '\n');
+                attribute.push('\n');
+                attribute
             })
             .collect::<Vec<_>>();
             Row::new(row).height((height * 2) as u16)
@@ -71,7 +77,7 @@ impl SocketGrid {
 
         let table = Table::new(rows, widths);
         let table = table.header(headers).column_spacing(7);
-        frame.render_stateful_widget(table, frame.area(), &mut self.table_state);
+        frame.render_stateful_widget(table, area, &mut self.table_state);
     }
 
     pub fn on_key_event(&mut self, key: KeyEvent) {
