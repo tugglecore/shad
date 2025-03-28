@@ -1,3 +1,4 @@
+#[cfg(target_os = "windows")]
 use windows::Win32::NetworkManagement::IpHelper::{
     GetExtendedUdpTable, GetTcpTable2, MIB_TCPTABLE2, MIB_UDPTABLE_OWNER_PID, UDP_TABLE_CLASS,
 };
@@ -12,6 +13,7 @@ pub struct Socket {
     pub remote_port: String,
 }
 
+#[cfg(target_os = "windows")]
 pub fn read_sockets() -> Vec<Socket> {
     let mut sockets = vec![];
     let mut size = u32::default();
@@ -91,4 +93,8 @@ pub fn read_sockets() -> Vec<Socket> {
     }
 
     sockets
+}
+
+pub fn read_sockets() -> Vec<Socket> {
+    vec![]
 }

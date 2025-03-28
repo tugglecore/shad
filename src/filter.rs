@@ -30,10 +30,13 @@ impl FilterBox {
 
 impl FilterBox {
     pub fn draw(&mut self, frame: &mut Frame, area: Rect, filtering: bool) {
+        // println!("Height: {:#?}", area.height);
         let mut prelim = String::from("Filters: ");
 
-        if self.filters.is_empty() && !filtering {
+        if self.input.is_empty() && !filtering {
             prelim += "Press f to add filters"
+        } else {
+            prelim += &self.input
         }
 
         frame.render_widget(Paragraph::new(prelim.clone()), area);
@@ -46,18 +49,16 @@ impl FilterBox {
     pub fn on_key_event(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char(c) => {
-                if self.filters.len() == 0 {
-                    self.filters.push(Filter::default());
-                    self.selected_filter = 0;
-                }
-
-                self.filters[self.selected_filter].token.push(c)
+                self.input.push(c)
             }
-            KeyCode::Enter => {
-                self.filters[self.selected_filter].is_complete = true;
-                self.selected_filter += 1;
+            KeyCode::Backspace => {
+                self.input.pop();
             }
             _ => {}
         }
+    }
+
+    pub fn count_lines(&self, line_width: usize) -> usize {
+        (line_width / std::cmp::max(1, self.input.len())) + 1
     }
 }

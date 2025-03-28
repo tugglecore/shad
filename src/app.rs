@@ -1,3 +1,4 @@
+use std::cmp::min;
 use crate::filter::FilterBox;
 use crate::sockets::SocketGrid;
 use color_eyre::Result;
@@ -54,7 +55,7 @@ impl App {
     /// - <https://github.com/ratatui/ratatui/tree/master/examples>
     fn draw(&mut self, frame: &mut Frame) {
         let vertical = Layout::vertical([
-            Constraint::Length(3),
+            Constraint::Max(5),
             Constraint::Min(3),
             Constraint::Length(3),
         ]);
@@ -66,27 +67,40 @@ impl App {
         self.render_footer(frame, rects[2]);
     }
 
-    fn render_header(&mut self, frame: &mut Frame, area: Rect) {
-        use Constraint::Ratio;
+    fn render_header(&mut self, frame: &mut Frame, mut area: Rect) {
+        let lines_for_filter = self.filter.count_lines(
+            area.width as usize
+        );
+        area.height = min(
+            area.height - 2, // 2 lines are required for top & bottom border
+            lines_for_filter as u16
+        );
 
         let block = Block::bordered();
-        let horizontal = Layout::horizontal([Ratio(1, 3); 3]);
+        frame.render_widget(&block, area);
+
+        let horizontal = Layout::horizontal([Constraint::Ratio(1, 3); 3]);
 
         let rects = horizontal.split(block.inner(area));
 
-        frame.render_widget(block, area);
-
+        let mut filter_area = rects[0];
+        filter_area.height = 1;
         self.filter
-            .draw(frame, rects[0], matches!(self.current_mode, Mode::Filter));
+            .draw(frame, filter_area, matches!(self.current_mode, Mode::Filter));
 
         let total_sockets = self.current_screen.sockets.len();
         let count = Paragraph::new(format!("Total: {}", total_sockets));
 
-        frame.render_widget(count, rects[1]);
+        let mut count_area = rects[1];
+        count_area.height = 1;
+
+        frame.render_widget(count, count_area);
 
         let sort = Paragraph::new("Sort: Press s to sort");
 
-        frame.render_widget(sort, rects[2]);
+        let mut sort_area = rects[2];
+        sort_area.height = 1;
+        frame.render_widget(sort, sort_area);
     }
 
     fn render_footer(&self, frame: &mut Frame, area: Rect) {
