@@ -7,6 +7,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Row, Table, TableState, Widget},
     DefaultTerminal, Frame,
 };
+use log::info;
 
 #[derive(Debug, Default)]
 struct Filter {
@@ -59,6 +60,9 @@ impl FilterBox {
     }
 
     pub fn count_lines(&self, line_width: usize) -> usize {
-        (line_width / std::cmp::max(1, self.input.len())) + 1
+        let r =  (line_width / std::cmp::max(1, self.input.len()));
+        info!("math result: {r:#?}");
+
+        r
     }
 }

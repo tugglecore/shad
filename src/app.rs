@@ -10,6 +10,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Row, Table, TableState},
     DefaultTerminal, Frame,
 };
+use log::info;
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -68,9 +69,16 @@ impl App {
     }
 
     fn render_header(&mut self, frame: &mut Frame, mut area: Rect) {
-        let lines_for_filter = self.filter.count_lines(
-            area.width as usize
+        let horizontal = Layout::horizontal(
+        [Constraint::Ratio(1, 3); 3]
         );
+
+        let [filter_width, _, _] = horizontal.areas(area);
+
+        let lines_for_filter = self.filter.count_lines(
+            (filter_width.width - 1) as usize
+        );
+        info!("lines needed: {:#?}", lines_for_filter);
         area.height = min(
             area.height - 2, // 2 lines are required for top & bottom border
             lines_for_filter as u16
@@ -79,7 +87,6 @@ impl App {
         let block = Block::bordered();
         frame.render_widget(&block, area);
 
-        let horizontal = Layout::horizontal([Constraint::Ratio(1, 3); 3]);
 
         let rects = horizontal.split(block.inner(area));
 
