@@ -1,4 +1,5 @@
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use log::info;
 use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Position, Rect},
@@ -7,7 +8,8 @@ use ratatui::{
     widgets::{Block, Paragraph, Row, Table, TableState, Widget},
     DefaultTerminal, Frame,
 };
-use log::info;
+
+const PREAMBLE: &str = "Filters: ";
 
 #[derive(Debug, Default)]
 struct Filter {
@@ -18,51 +20,69 @@ struct Filter {
 
 #[derive(Debug, Default)]
 pub struct FilterBox {
-    selected_filter: usize,
-    pub filters: Vec<Filter>,
-    pub input: String
+    pub input: String,
+    cursor_position: [u16; 2]
 }
 
 impl FilterBox {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            cursor_position: [(PREAMBLE.len() as u16) + 1, 0],
+            ..Default::default()
+        }
     }
 }
 
 impl FilterBox {
     pub fn draw(&mut self, frame: &mut Frame, area: Rect, filtering: bool) {
-        // println!("Height: {:#?}", area.height);
-        let mut prelim = String::from("Filters: ");
+        let mut contents = String::new();
+        contents += PREAMBLE;
 
         if self.input.is_empty() && !filtering {
-            prelim += "Press f to add filters"
+            contents += "Press f to add filters"
         } else {
-            prelim += &self.input
+            contents += &self.input
         }
 
-        frame.render_widget(Paragraph::new(prelim.clone()), area);
+        frame.render_widget(Paragraph::new(contents.clone()), area);
 
         if filtering {
-            frame.set_cursor_position(Position::new(area.x + (prelim.len() as u16), area.y));
+            frame.set_cursor_position(
+                Position::new(
+                    self.cursor_position[0],
+                    self.cursor_position[1] + area.y
+                )
+            );
         }
     }
 
     pub fn on_key_event(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char(c) => {
-                self.input.push(c)
+                self.input.push(c);
+                self.cursor_position[0] += 1;
             }
             KeyCode::Backspace => {
                 self.input.pop();
+                self.cursor_position[0] -= 1;
+            }
+            KeyCode::Right => {
+                dbg!(self.cursor_position);
+                dbg!(self.input.len());
+                if self.cursor_position[0] < (self.input.len() - 1) as u16 {
+                    self.cursor_position[0] += 1;
+                }
+            }
+            KeyCode::Left => {
+                if self.cursor_position[0] > (PREAMBLE.len() +1) as u16 {
+                    self.cursor_position[0] -= 1;
+                }
             }
             _ => {}
         }
     }
 
-    pub fn count_lines(&self, line_width: usize) -> usize {
-        let r =  (line_width / std::cmp::max(1, self.input.len()));
-        info!("math result: {r:#?}");
-
-        r
+    pub fn count_lines(&self, max_line_width: usize) -> usize {
+        ((PREAMBLE.len() + self.input.len()) / max_line_width) + 1
     }
 }

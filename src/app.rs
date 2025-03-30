@@ -1,8 +1,8 @@
-use std::cmp::min;
 use crate::filter::FilterBox;
 use crate::sockets::SocketGrid;
 use color_eyre::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use log::info;
 use ratatui::{
     layout::{Constraint, Layout, Rect},
     style::{Style, Stylize},
@@ -10,7 +10,7 @@ use ratatui::{
     widgets::{Block, Paragraph, Row, Table, TableState},
     DefaultTerminal, Frame,
 };
-use log::info;
+use std::cmp::min;
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -35,7 +35,9 @@ impl App {
     pub fn new() -> Self {
         let mut me = Self::default();
         let sg = SocketGrid::new();
+        let f = FilterBox::new();
         me.current_screen = sg;
+        me.filter = f;
         me
     }
 
@@ -69,31 +71,29 @@ impl App {
     }
 
     fn render_header(&mut self, frame: &mut Frame, mut area: Rect) {
-        let horizontal = Layout::horizontal(
-        [Constraint::Ratio(1, 3); 3]
-        );
+        let horizontal = Layout::horizontal([Constraint::Ratio(1, 3); 3]);
 
         let [filter_width, _, _] = horizontal.areas(area);
 
-        let lines_for_filter = self.filter.count_lines(
-            (filter_width.width - 1) as usize
-        );
-        info!("lines needed: {:#?}", lines_for_filter);
+        let lines_for_filter = self.filter.count_lines((filter_width.width - 1) as usize);
+
         area.height = min(
-            area.height - 2, // 2 lines are required for top & bottom border
-            lines_for_filter as u16
+            5,
+            (lines_for_filter as u16) + 2, // 2 lines for for border
         );
 
         let block = Block::bordered();
         frame.render_widget(&block, area);
 
-
         let rects = horizontal.split(block.inner(area));
 
         let mut filter_area = rects[0];
         filter_area.height = 1;
-        self.filter
-            .draw(frame, filter_area, matches!(self.current_mode, Mode::Filter));
+        self.filter.draw(
+            frame,
+            filter_area,
+            matches!(self.current_mode, Mode::Filter),
+        );
 
         let total_sockets = self.current_screen.sockets.len();
         let count = Paragraph::new(format!("Total: {}", total_sockets));
