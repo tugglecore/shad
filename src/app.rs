@@ -77,10 +77,7 @@ impl App {
 
         let lines_for_filter = self.filter.count_lines((filter_width.width - 1) as usize);
 
-        area.height = min(
-            5,
-            (lines_for_filter as u16) + 2, // 2 lines for for border
-        );
+        area.height = 4;
 
         let block = Block::bordered();
         frame.render_widget(&block, area);
@@ -88,7 +85,7 @@ impl App {
         let rects = horizontal.split(block.inner(area));
 
         let mut filter_area = rects[0];
-        filter_area.height = 1;
+        // filter_area.height = 1;
         self.filter.draw(
             frame,
             filter_area,
