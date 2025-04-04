@@ -22,7 +22,7 @@ struct Filter {
 pub struct FilterBox {
     pub input: String,
     filter_area: Rect,
-    cursor_position: [u16; 2],
+    cursor_position: u16,
 }
 
 impl FilterBox {
@@ -44,7 +44,7 @@ impl FilterBox {
         self.filter_area = filter_area;
 
         let label_text = "Filters: ";
-        let input_box_splits = Layout::new(
+        let input_splits = Layout::new(
             Direction::Horizontal,
             [
                 Constraint::Length(label_text.len() as u16),
@@ -53,18 +53,32 @@ impl FilterBox {
         )
         .split(splits[0]);
 
-        let label_widget = Text::from(label_text);
-
-        frame.render_widget(label_widget, input_box_splits[0]);
+        let label_widget = Line::from(label_text);
+        frame.render_widget(label_widget, input_splits[0]);
 
         if self.input.is_empty() && !currently_filtering {
             let help_text = "Press f to add filters";
             let help_widget = Text::from(help_text);
-            frame.render_widget(help_widget, input_box_splits[1]);
+            frame.render_widget(help_widget, input_splits[1]);
 
             return;
         }
 
+        let filter_input = if self.input.len() > input_splits[1].width as usize {
+            let start_slice = self.input.len() - input_splits[1].width as usize;
+            &self.input[start_slice..]
+        } else {
+            self.input.as_str()
+        };
+
+        let filter_input = Line::from(filter_input);
+        frame.render_widget(filter_input, input_splits[1]);
+
+        frame.set_cursor_position(Position::new(
+            input_splits[1].x + self.cursor_position,
+            input_splits[1].y
+        ));
+        
         // let mut lines = vec![];
         //
         // dbg!(&self);
@@ -107,21 +121,17 @@ impl FilterBox {
         match key.code {
             KeyCode::Char(c) => {
                 self.input.push(c);
-                self.cursor_position[0] += 1;
+                self.cursor_position += 1;
             }
             KeyCode::Backspace => {
                 self.input.pop();
-                self.cursor_position[0] -= 1;
+                self.cursor_position -= 1;
             }
             KeyCode::Right => {
-                if self.cursor_position[0] <= (PREAMBLE.len() + self.input.len()) as u16 {
-                    self.cursor_position[0] += 1;
-                }
+                    self.cursor_position += 1;
             }
             KeyCode::Left => {
-                if self.cursor_position[0] > (PREAMBLE.len() + 1) as u16 {
-                    self.cursor_position[0] -= 1;
-                }
+                    self.cursor_position -= 1;
             }
             _ => {}
         }
