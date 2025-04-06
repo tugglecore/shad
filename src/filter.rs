@@ -21,7 +21,7 @@ struct Filter {
 #[derive(Debug, Default)]
 pub struct FilterBox {
     pub input: String,
-    filter_area: Rect,
+    filter_input_area: Rect,
     cursor_position: u16,
 }
 
@@ -41,7 +41,6 @@ impl FilterBox {
         )
         .split(area);
         let filter_area = splits[1];
-        self.filter_area = filter_area;
 
         let label_text = "Filters: ";
         let input_splits = Layout::new(
@@ -52,6 +51,8 @@ impl FilterBox {
             ],
         )
         .split(splits[0]);
+
+        self.filter_input_area = input_splits[1];
 
         let label_widget = Line::from(label_text);
         frame.render_widget(label_widget, input_splits[0]);
@@ -79,61 +80,45 @@ impl FilterBox {
             input_splits[1].y
         ));
         
-        // let mut lines = vec![];
-        //
-        // dbg!(&self);
-        // dbg!(&filter_area);
-        //
-        // dbg!(self.input.len());
-        //
-        // let mut lower_bound = 0;
-        // while lower_bound < self.input.len() {
-        //     let filter_width = filter_area.width as usize;
-        //
-        //     let mut upper_bound = lower_bound + (filter_width - 1);
-        //     if upper_bound >= self.input.len() {
-        //         upper_bound = self.input.len() - 1
-        //     }
-        //     // let upper_bound = if upper_bound < self.input.len() {
-        //     //     position + filter_width
-        //     // } else {
-        //     //     position + self.input.len() - 1
-        //     // };
-        //
-        //     let filter_line = Line::from(
-        //         &self.input[lower_bound..=upper_bound]
-        //     );
-        //
-        //     lines.push(filter_line);
-        //
-        //     lower_bound = upper_bound + 1;
-        // }
-        //
-        // frame.render_widget(Text::from(lines), filter_area);
-        //
-        // frame.set_cursor_position(Position::new(
-        //     filter_area.x + self.cursor_position[0],
-        //     filter_area.y + self.cursor_position[1]
-        // ));
     }
 
     pub fn on_key_event(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char(c) => {
                 self.input.push(c);
-                self.cursor_position += 1;
+                self.move_cursor_to_right();
             }
             KeyCode::Backspace => {
                 self.input.pop();
                 self.cursor_position -= 1;
             }
-            KeyCode::Right => {
-                    self.cursor_position += 1;
-            }
-            KeyCode::Left => {
-                    self.cursor_position -= 1;
-            }
+            KeyCode::Right => self.move_cursor_to_right(),
+            KeyCode::Left => self.move_cursor_to_left(),
             _ => {}
+        }
+    }
+
+    fn move_cursor_to_left(&mut self) {
+        info!("move the position to the left");
+
+        let left_position = self.cursor_position - 1;
+
+        dbg!(self.input.len());
+        dbg!(left_position);
+
+        if left_position as usize > self.input.len() { return }
+
+    }
+
+    fn move_cursor_to_right(&mut self) {
+        let next_position = self.cursor_position + 1;
+
+        if next_position as usize > self.input.len() { return }
+
+        if self.cursor_position + 1 > self.filter_input_area.width {
+            self.cursor_position = self.filter_input_area.width;
+        } else {
+            self.cursor_position += 1;
         }
     }
 
