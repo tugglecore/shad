@@ -4,7 +4,7 @@ use ratatui::{
     buffer::Buffer,
     layout::{Constraint, Direction, Layout, Position, Rect},
     style::{Modifier, Style, Stylize},
-    text::{Line, Text},
+    text::{Line, Text, Span},
     widgets::{Block, Paragraph, Row, Table, TableState, Widget, Wrap},
     DefaultTerminal, Frame,
 };
@@ -23,6 +23,7 @@ pub struct FilterBox {
     pub input: String,
     filter_input_area: Rect,
     cursor_position: u16,
+    filters: Vec<String>
 }
 
 impl FilterBox {
@@ -40,7 +41,6 @@ impl FilterBox {
             [Constraint::Length(1), Constraint::Fill(1)],
         )
         .split(area);
-        let filter_area = splits[1];
 
         let label_text = "Filters: ";
         let input_splits = Layout::new(
@@ -79,7 +79,19 @@ impl FilterBox {
             input_splits[1].x + self.cursor_position,
             input_splits[1].y
         ));
-        
+
+        let filter_area = splits[1];
+        // let unselected_styling = Style::new().on_red();
+        // let test_text = Span::styled("work for me", unselected_styling);
+        // frame.render_widget(test_text, filter_area)
+
+        // let is_first_filter_on_line = true;
+        // let mut filters_on_line = vec![];
+        // for saved_filter in &self.filters {
+        //     filters_on_line.push(saved_filter.as_str());
+        // }
+
+
     }
 
     pub fn on_key_event(&mut self, key: KeyEvent) {
@@ -94,20 +106,19 @@ impl FilterBox {
             }
             KeyCode::Right => self.move_cursor_to_right(),
             KeyCode::Left => self.move_cursor_to_left(),
+            KeyCode::Enter => self.save_filter(),
             _ => {}
         }
     }
 
+    fn save_filter(&mut self) {
+        self.filters.push(self.input.clone());
+        self.input.clear();
+        self.cursor_position = 0;
+    }
+
     fn move_cursor_to_left(&mut self) {
-        info!("move the position to the left");
-
-        let left_position = self.cursor_position - 1;
-
-        dbg!(self.input.len());
-        dbg!(left_position);
-
-        if left_position as usize > self.input.len() { return }
-
+        self.cursor_position = self.cursor_position.saturating_sub(1);
     }
 
     fn move_cursor_to_right(&mut self) {
