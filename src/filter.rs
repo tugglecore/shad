@@ -23,12 +23,16 @@ pub struct FilterBox {
     pub input: String,
     filter_input_area: Rect,
     cursor_position: u16,
-    filters: Vec<String>
+    filters: Vec<String>,
+    filter_view: [usize; 2],
+    selected_filter: Option<usize>
 }
 
 impl FilterBox {
     pub fn new() -> Self {
+        let filter_view = [0, 1];
         Self {
+            filter_view,
             ..Default::default()
         }
     }
@@ -87,9 +91,30 @@ impl FilterBox {
 
         // let is_first_filter_on_line = true;
         // let mut filters_on_line = vec![];
-        // for saved_filter in &self.filters {
-        //     filters_on_line.push(saved_filter.as_str());
-        // }
+        let filter_lines = Layout::new(
+            Direction::Vertical,
+            [
+                Constraint::Length(1),
+                Constraint::Length(1)
+            ],
+        )
+        .split(splits[1])
+        .to_vec();
+
+        if self.filters.len() > 0 {
+            let spans = self
+                .filter_view
+                .iter()
+                .filter_map(|filter_position| self.filters.get(filter_position.clone()))
+                .map(|filter| Span::raw(filter))
+                .collect::<Vec<Span>>();
+                
+
+                for (rect, span) in filter_lines.iter().zip(spans.iter()) {
+                    frame.render_widget(span, *rect);
+                }
+            
+        }
 
 
     }
@@ -117,10 +142,14 @@ impl FilterBox {
         self.cursor_position = 0;
     }
 
+    // TODO: implement movevent to the left when there are
+    // characters overflowing the left side of the input box
     fn move_cursor_to_left(&mut self) {
         self.cursor_position = self.cursor_position.saturating_sub(1);
     }
 
+    // TODO: implement movevent to the left when there are
+    // characters overflowing the right side of the input box
     fn move_cursor_to_right(&mut self) {
         let next_position = self.cursor_position + 1;
 
